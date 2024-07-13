@@ -1,6 +1,5 @@
-import React, { useCallback, useState } from "react";
+import React, { useState } from "react";
 import axios from "axios";
-// import DownloadVideos from "./Pages/DownloadVideos";
 
 function App() {
   const [inputStates, setInputStates] = useState([]);
@@ -10,16 +9,28 @@ function App() {
   const handleDownload = async (url) => {
     try {
       setIsLoading(true);
-      const response = await axios.get(url, {
-        responseType: "blob",
+
+      // Send a POST request to the backend endpoint
+      const response = await axios.post("http://localhost:8080/download-video", { url });
+      console.log(response)
+      return
+      // // Create a Blob from the response data
+      const blob = new Blob([response.data], {
+        type: response.headers["content-type"],
       });
-      const urlBlob = window.URL.createObjectURL(new Blob([response.data]));
+
+      // Create a temporary URL for the Blob
+      const urlBlob = window.URL.createObjectURL(blob);
+
+      // Create an <a> element to trigger download
       const a = document.createElement("a");
       a.href = urlBlob;
       a.download = url.split("/").pop(); // Use the last part of the URL as the filename
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+
+      // Revoke the temporary URL
       window.URL.revokeObjectURL(urlBlob);
     } catch (error) {
       console.error("Error downloading the video:", error);
@@ -35,21 +46,14 @@ function App() {
     }
   };
 
-  const handleChange = useCallback((e, index) => {
+  const handleChange = (e, index) => {
     const { value } = e.target;
     setInputStates((prevState) => {
-      // Check if the index exists in the previous state
       const newState = [...prevState];
-      if (newState[index] !== undefined) {
-        // Update the existing value
-        newState[index] = value;
-      } else {
-        // Create a new entry at the index
-        newState[index] = value;
-      }
+      newState[index] = value;
       return newState;
     });
-  }, []);
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-black">
@@ -58,7 +62,7 @@ function App() {
           Paste Link Here
         </span>
 
-        {/* Form to submit  */}
+        {/* Form to submit */}
         <form className="w-full" onSubmit={downloadAll}>
           {[...Array(countInputBox)].map((_, index) => (
             <div key={index}>
@@ -71,7 +75,7 @@ function App() {
                   id={`link-${index}`}
                   placeholder="Paste link here..."
                   className="peer h-8 w-full border-none bg-transparent placeholder-transparent focus:border-transparent focus:outline-none focus:ring-0 sm:text-sm items-center my-3 py-4"
-                  value={inputStates[index]}
+                  value={inputStates[index] || ""}
                   onChange={(e) => handleChange(e, index)}
                 />
                 <span className="absolute start-3 top-3 -translate-y-1/2 text-xs text-gray-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:top-3 peer-focus:text-xs">
