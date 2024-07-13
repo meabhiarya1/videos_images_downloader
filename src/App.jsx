@@ -11,9 +11,12 @@ function App() {
       setIsLoading(true);
 
       // Send a POST request to the backend endpoint
-      const response = await axios.post("http://localhost:8080/download-video", { url });
-      console.log(response)
-      return
+      const response = await axios.post(
+        "http://localhost:8080/download-video",
+        { url: url }
+      );
+      console.log(response);
+      return;
       // // Create a Blob from the response data
       const blob = new Blob([response.data], {
         type: response.headers["content-type"],
