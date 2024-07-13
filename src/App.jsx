@@ -1,20 +1,42 @@
 import React, { useCallback, useState } from "react";
 import axios from "axios";
+// import DownloadVideos from "./Pages/DownloadVideos";
 
 function App() {
   const [inputStates, setInputStates] = useState([]);
   const [countInputBox, setCountInputBox] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = useCallback(
-    (e) => {
-      e.preventDefault();
-    },
-    [inputStates]
-  );
+  const handleDownload = async (url) => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(url, {
+        responseType: "blob",
+      });
+      const urlBlob = window.URL.createObjectURL(new Blob([response.data]));
+      const a = document.createElement("a");
+      a.href = urlBlob;
+      a.download = url.split("/").pop(); // Use the last part of the URL as the filename
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(urlBlob);
+    } catch (error) {
+      console.error("Error downloading the video:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const downloadAll = async (e) => {
+    e.preventDefault();
+    for (const link of inputStates) {
+      await handleDownload(link);
+    }
+  };
 
   const handleChange = useCallback((e, index) => {
     const { value } = e.target;
-
     setInputStates((prevState) => {
       // Check if the index exists in the previous state
       const newState = [...prevState];
@@ -37,7 +59,7 @@ function App() {
         </span>
 
         {/* Form to submit  */}
-        <form className="w-full" onSubmit={handleSubmit}>
+        <form className="w-full" onSubmit={downloadAll}>
           {[...Array(countInputBox)].map((_, index) => (
             <div key={index}>
               <label
@@ -73,7 +95,7 @@ function App() {
             type="submit"
             className="w-full inline-block rounded border border-indigo-600 bg-indigo-600 px-12 py-3 text-sm font-medium text-slate-300  hover:bg-transparent hover:text-indigo-600 mt-4 text-center"
           >
-            Download
+            {isLoading ? "Downloading..." : "Download"}
           </button>
         </form>
       </div>
