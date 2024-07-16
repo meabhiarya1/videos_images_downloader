@@ -5,26 +5,29 @@ function App() {
   const [inputStates, setInputStates] = useState([""]); // Initialize with one empty input
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [downloadedFiles, setDownloadedFiles] = useState([]);
+  const [errorDetails, setErrorDetails] = useState([]); // Track individual errors for each input
 
-  const handleDownload = async (url) => {
+  const handleDownload = async (url, index) => {
     try {
-      setIsLoading(true);
-
       // Send a POST request to the backend endpoint
       const response = await axios.post(
         "http://localhost:8080/download-video",
         { url }
       );
 
-      const downloadUrl = await axios.get(
-        `http://localhost:8080/downloads/${response.data}`
-      );
+      const downloadUrl = `http://localhost:8080/downloads/${response.data}`;
+
+      // Fetch the video data
+      const videoResponse = await fetch(downloadUrl);
+      const videoBlob = await videoResponse.blob();
+
+      // Create a temporary URL for the video blob
+      const videoBlobUrl = URL.createObjectURL(videoBlob);
+
       // Create a link element
       const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.target = "_blank"; // Optional: Open in new tab
-      link.setAttribute("download", `${response.data}`); // Optional: Specify filename for download
+      link.href = videoBlobUrl;
+      link.setAttribute("download", `${response.data}`); // Specify filename for download
 
       // Append the link to the body
       document.body.appendChild(link);
@@ -32,29 +35,37 @@ function App() {
       // Trigger the click event to start download
       link.click();
 
-      // Clean up: Remove the link from the DOM
+      // Clean up: Remove the link and revoke the blob URL
       document.body.removeChild(link);
-
-      // Add downloaded file info to state
-      // setDownloadedFiles((prevFiles) => [
-      //   ...prevFiles,
-      //   { url, filePath: response.data },
-      // ]);
+      URL.revokeObjectURL(videoBlobUrl);
+      setInputStates([""])
     } catch (error) {
-      console.error("Error downloading the video:", error);
-      setError("Failed to download the video. Please try again.");
-    } finally {
-      setIsLoading(false);
+      console.error(`Error downloading video at index ${index + 1}:`, error);
+      throw new Error(`Failed to download video at index ${index + 1}`);
     }
   };
 
   const downloadAll = async (e) => {
     e.preventDefault();
     setError("");
+    setErrorDetails([]);
     setIsLoading(true);
 
     try {
-      await Promise.all(inputStates.map((link) => handleDownload(link)));
+      await Promise.all(
+        inputStates.map((link, index) =>
+          handleDownload(link, index).catch((err) => {
+            setErrorDetails((prev) => [
+              ...prev,
+              { index, message: err.message },
+            ]);
+          })
+        )
+      );
+
+      if (errorDetails.length > 0) {
+        setError("Some downloads failed. Please check the individual errors.");
+      }
     } catch (error) {
       console.error("Error during download all:", error);
       setError("An error occurred during the download. Please try again.");
@@ -94,11 +105,17 @@ function App() {
                   className="peer h-8 w-full border-none bg-transparent placeholder-transparent focus:border-transparent focus:outline-none focus:ring-0 sm:text-sm items-center my-3 py-4"
                   value={link}
                   onChange={(e) => handleChange(e, index)}
+                  disabled={isLoading}
                 />
                 <span className="absolute start-3 top-3 -translate-y-1/2 text-xs text-gray-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:top-3 peer-focus:text-xs">
                   Paste link here...
                 </span>
               </label>
+              {errorDetails.some((err) => err.index === index) && (
+                <div className="text-red-500 text-sm">
+                  {errorDetails.find((err) => err.index === index).message}
+                </div>
+              )}
             </div>
           ))}
 
@@ -106,6 +123,7 @@ function App() {
           <button
             type="button"
             className="w-24 flex rounded border border-indigo-600 bg-indigo-600 px-2 py-3 text-sm font:sm md:font-medium text-slate-300 hover:bg-transparent hover:text-indigo-600 text-center items-center justify-center"
+            disabled={isLoading}
             onClick={() => setInputStates((prevInputs) => [...prevInputs, ""])}
           >
             More Link
@@ -114,28 +132,34 @@ function App() {
           {/* Download Button */}
           <button
             type="submit"
-            className="w-full inline-block rounded border border-indigo-600 bg-indigo-600 px-12 py-3 text-sm font-medium text-slate-300 hover:bg-transparent hover:text-indigo-600 mt-4 text-center"
+            className="w-full inline-block rounded border border-indigo-600 bg-indigo-600 px-12 py-3 text-sm font-medium text-slate-300 hover:bg-transparent hover:text-indigo-600 my-4 text-center"
+            disabled={isLoading}
           >
             {isLoading ? "Downloading..." : "Download"}
           </button>
-          {error && <div className="mt-4 text-red-500">{error}</div>}
-        </form>
 
-        {/* Display downloaded files */}
-        {/* {downloadedFiles.length > 0 && (
-          <div className="mt-8">
-            <h2 className="text-lg font-semibold text-white mb-2">Downloaded Files:</h2>
-            <ul className="text-white">
-              {downloadedFiles.map((file, index) => (
-                <li key={index}>
-                  <a href={file.filePath} download="video.mp4">
-                    {file.url} - {file.filePath}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )} */}
+          {error && <div className="mt-4 text-red-500 text-sm">{error}</div>}
+
+          {isLoading && (
+            <div>
+              <span id="ProgressLabel" className="sr-only">
+                Loading
+              </span>
+
+              <span
+                role="progressbar"
+                aria-labelledby="ProgressLabel"
+                aria-valuenow="75"
+                className="block rounded-full bg-gray-200"
+              >
+                <span
+                  className="block h-3 rounded-full bg-[repeating-linear-gradient(45deg,_var(--tw-gradient-from)_0,_var(--tw-gradient-from)_20px,_var(--tw-gradient-to)_20px,_var(--tw-gradient-to)_40px)] from-indigo-400 to-indigo-500"
+                  style={{ width: "75%" }} // Adjust width as needed
+                ></span>
+              </span>
+            </div>
+          )}
+        </form>
       </div>
     </div>
   );
