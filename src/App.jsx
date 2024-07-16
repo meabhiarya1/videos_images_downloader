@@ -3,9 +3,11 @@ import axios from "axios";
 
 function App() {
   const [inputStates, setInputStates] = useState([""]); // Initialize with one empty input
+  // const [downloadedVideos, setDownloadedVideos] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [errorDetails, setErrorDetails] = useState([]); // Track individual errors for each input
+  let downloadedVideos = [];
 
   const handleDownload = async (url, index) => {
     try {
@@ -15,7 +17,10 @@ function App() {
         { url }
       );
 
-      const downloadUrl = `http://localhost:8080/downloads/${response.data}`;
+      const videoName = response.data;
+      downloadedVideos.push(videoName);
+
+      const downloadUrl = `http://localhost:8080/downloads/${videoName}`;
 
       // Fetch the video data
       const videoResponse = await fetch(downloadUrl);
@@ -27,7 +32,7 @@ function App() {
       // Create a link element
       const link = document.createElement("a");
       link.href = videoBlobUrl;
-      link.setAttribute("download", `${response.data}`); // Specify filename for download
+      link.setAttribute("download", videoName); // Specify filename for download
 
       // Append the link to the body
       document.body.appendChild(link);
@@ -38,7 +43,6 @@ function App() {
       // Clean up: Remove the link and revoke the blob URL
       document.body.removeChild(link);
       URL.revokeObjectURL(videoBlobUrl);
-      setInputStates([""])
     } catch (error) {
       console.error(`Error downloading video at index ${index + 1}:`, error);
       throw new Error(`Failed to download video at index ${index + 1}`);
@@ -52,16 +56,13 @@ function App() {
     setIsLoading(true);
 
     try {
-      await Promise.all(
-        inputStates.map((link, index) =>
-          handleDownload(link, index).catch((err) => {
-            setErrorDetails((prev) => [
-              ...prev,
-              { index, message: err.message },
-            ]);
-          })
-        )
+      const downloadPromises = inputStates.map((link, index) =>
+        handleDownload(link, index).catch((err) => {
+          setErrorDetails((prev) => [...prev, { index, message: err.message }]);
+        })
       );
+      // Wait for all download promises to complete
+      await Promise.all(downloadPromises);
 
       if (errorDetails.length > 0) {
         setError("Some downloads failed. Please check the individual errors.");
@@ -70,7 +71,32 @@ function App() {
       console.error("Error during download all:", error);
       setError("An error occurred during the download. Please try again.");
     } finally {
-      setIsLoading(false);
+      try {
+        // Ensure cleanup is always called, even if there are errors
+        await cleanup();
+      } catch (cleanupError) {
+        console.error("Error during cleanup:", cleanupError);
+        // Handle cleanup errors if needed
+      } finally {
+        setIsLoading(false);
+        setInputStates([""]); // Reset input fields after processing
+        downloadedVideos = [];
+      }
+    }
+  };
+
+  const cleanup = async () => {
+    try {
+      if (downloadedVideos.length > 0) {
+        console.log("object downloadedVideos");
+        await axios.post("http://localhost:8080/delete-video", {
+          videos: downloadedVideos,
+        });
+        // Clear downloaded videos state after successful cleanup
+      }
+    } catch (error) {
+      console.error("Error during cleanup:", error);
+      throw new Error("Cleanup failed"); // Ensure cleanup failure is handled in downloadAll
     }
   };
 
@@ -86,8 +112,8 @@ function App() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-black">
       <div className="text-2xl flex flex-col justify-center items-center w-full max-w-5xl p-4 bg-slate-700 rounded-lg shadow-md mx-4">
-        <span className="m-4 font-medium p-2 text-center rounded-lg max-w-48">
-          Paste Link Here
+        <span className="m-4 font-medium p-2 text-center rounded-lg max-w-md text-sm">
+          Paste Video Link...
         </span>
 
         {/* Form to submit */}
@@ -133,7 +159,9 @@ function App() {
           <button
             type="submit"
             className="w-full inline-block rounded border border-indigo-600 bg-indigo-600 px-12 py-3 text-sm font-medium text-slate-300 hover:bg-transparent hover:text-indigo-600 my-4 text-center"
-            disabled={isLoading}
+            disabled={
+              isLoading || inputStates.every((input) => input.trim() === "")
+            }
           >
             {isLoading ? "Downloading..." : "Download"}
           </button>
