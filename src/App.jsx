@@ -4,7 +4,6 @@ import Spinner from "./comp/Spinner";
 
 function App() {
   const [inputStates, setInputStates] = useState([""]); // Initialize with one empty input
-  // const [downloadedVideos, setDownloadedVideos] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [errorDetails, setErrorDetails] = useState([]); // Track individual errors for each input
@@ -89,7 +88,6 @@ function App() {
   const cleanup = async () => {
     try {
       if (downloadedVideos.length > 0) {
-        console.log("object downloadedVideos");
         await axios.post("http://localhost:8080/delete-video", {
           videos: downloadedVideos,
         });
