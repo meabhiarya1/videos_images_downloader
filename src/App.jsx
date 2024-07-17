@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import axios from "axios";
+import Spinner from "./comp/Spinner";
 
 function App() {
   const [inputStates, setInputStates] = useState([""]); // Initialize with one empty input
@@ -163,30 +164,10 @@ function App() {
               isLoading || inputStates.every((input) => input.trim() === "")
             }
           >
-            {isLoading ? "Downloading..." : "Download"}
+            {isLoading ? <Spinner /> : "Download"}
           </button>
 
           {error && <div className="mt-4 text-red-500 text-sm">{error}</div>}
-
-          {isLoading && (
-            <div>
-              <span id="ProgressLabel" className="sr-only">
-                Loading
-              </span>
-
-              <span
-                role="progressbar"
-                aria-labelledby="ProgressLabel"
-                aria-valuenow="75"
-                className="block rounded-full bg-gray-200"
-              >
-                <span
-                  className="block h-3 rounded-full bg-[repeating-linear-gradient(45deg,_var(--tw-gradient-from)_0,_var(--tw-gradient-from)_20px,_var(--tw-gradient-to)_20px,_var(--tw-gradient-to)_40px)] from-indigo-400 to-indigo-500"
-                  style={{ width: "75%" }} // Adjust width as needed
-                ></span>
-              </span>
-            </div>
-          )}
         </form>
       </div>
     </div>
