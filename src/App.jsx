@@ -8,8 +8,8 @@ function App() {
   const [error, setError] = useState("");
   const [errorDetails, setErrorDetails] = useState([]); // Track individual errors for each input
   let downloadedVideos = [];
-
   const connection = import.meta.env.VITE_API_URL;
+  
   const handleDownload = async (url, index) => {
     try {
       // Send a POST request to the backend endpoint
