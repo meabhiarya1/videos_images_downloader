@@ -9,18 +9,18 @@ function App() {
   const [errorDetails, setErrorDetails] = useState([]); // Track individual errors for each input
   let downloadedVideos = [];
 
+  const connection = import.meta.env.VITE_API_URL;
   const handleDownload = async (url, index) => {
     try {
       // Send a POST request to the backend endpoint
-      const response = await axios.post(
-        "http://localhost:8080/download-video",
-        { url }
-      );
+      const response = await axios.post(`${connection}/download-video`, {
+        url,
+      });
 
       const videoName = response.data;
       downloadedVideos.push(videoName);
 
-      const downloadUrl = `http://localhost:8080/downloads/${videoName}`;
+      const downloadUrl = `${connection}/downloads/${videoName}`;
 
       // Fetch the video data
       const videoResponse = await fetch(downloadUrl);
@@ -88,7 +88,7 @@ function App() {
   const cleanup = async () => {
     try {
       if (downloadedVideos.length > 0) {
-        await axios.post("http://localhost:8080/delete-video", {
+        await axios.post(`${connection}/delete-video`, {
           videos: downloadedVideos,
         });
         // Clear downloaded videos state after successful cleanup
