@@ -9,7 +9,7 @@ function App() {
   const [errorDetails, setErrorDetails] = useState([]); // Track individual errors for each input
   let downloadedVideos = [];
   const connection = import.meta.env.VITE_API_URL;
-  
+
   const handleDownload = async (url, index) => {
     try {
       // Send a POST request to the backend endpoint
@@ -26,13 +26,18 @@ function App() {
       const videoResponse = await fetch(downloadUrl);
       const videoBlob = await videoResponse.blob();
 
+      // Verify the blob data
+      if (!videoBlob.type.startsWith("video/")) {
+        throw new Error("Downloaded file is not a video");
+      }
+
       // Create a temporary URL for the video blob
       const videoBlobUrl = URL.createObjectURL(videoBlob);
 
       // Create a link element
       const link = document.createElement("a");
       link.href = videoBlobUrl;
-      link.setAttribute("download", videoName); // Specify filename for download
+      link.setAttribute("download", videoName);
 
       // Append the link to the body
       document.body.appendChild(link);
@@ -71,17 +76,10 @@ function App() {
       console.error("Error during download all:", error);
       setError("An error occurred during the download. Please try again.");
     } finally {
-      try {
-        // Ensure cleanup is always called, even if there are errors
-        await cleanup();
-      } catch (cleanupError) {
-        console.error("Error during cleanup:", cleanupError);
-        // Handle cleanup errors if needed
-      } finally {
-        setIsLoading(false);
-        setInputStates([""]); // Reset input fields after processing
-        downloadedVideos = [];
-      }
+      await cleanup();
+      setIsLoading(false);
+      setInputStates([""]); // Reset input fields after processing
+      downloadedVideos = [];
     }
   };
 
