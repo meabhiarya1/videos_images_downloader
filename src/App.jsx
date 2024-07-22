@@ -13,7 +13,7 @@ function App() {
   const handleDownload = async (url, index) => {
     try {
       // Send a POST request to the backend endpoint
-      const response = await axios.post(`${connection}/download-video`, {
+      const response = await axios.post(`${connection}/download/video`, {
         url,
       });
 
@@ -76,7 +76,7 @@ function App() {
       console.error("Error during download all:", error);
       setError("An error occurred during the download. Please try again.");
     } finally {
-      await cleanup();
+      // await cleanup();
       setIsLoading(false);
       setInputStates([""]); // Reset input fields after processing
       downloadedVideos = [];
@@ -86,7 +86,7 @@ function App() {
   const cleanup = async () => {
     try {
       if (downloadedVideos.length > 0) {
-        await axios.post(`${connection}/delete-video`, {
+        await axios.post(`${connection}/delete/video`, {
           videos: downloadedVideos,
         });
         // Clear downloaded videos state after successful cleanup
