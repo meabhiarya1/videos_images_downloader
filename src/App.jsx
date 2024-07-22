@@ -76,7 +76,7 @@ function App() {
       console.error("Error during download all:", error);
       setError("An error occurred during the download. Please try again.");
     } finally {
-      // await cleanup();
+      await cleanup();
       setIsLoading(false);
       setInputStates([""]); // Reset input fields after processing
       downloadedVideos = [];
